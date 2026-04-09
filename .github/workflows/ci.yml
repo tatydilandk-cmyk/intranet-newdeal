@@ -8,6 +8,7 @@ on:
 env:
   IMAGE_NAME: intranet-newdeal
   IMAGE_TAG: 1.0.0
+  DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
 
 jobs:
 
@@ -25,12 +26,14 @@ jobs:
           echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
       - name: Build Docker image
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
+          docker build -t ${DOCKER_USER}/intranet-newdeal:1.0.0 .
 
       - name: Verify image
         run: |
-          docker image ls | grep ${{ env.IMAGE_NAME }}
+          docker image ls | grep intranet-newdeal
 
   # ===============================
   # JOB 2 - SCAN SECURITE
@@ -43,8 +46,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker image for scan
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
+          docker build -t ${DOCKER_USER}/intranet-newdeal:1.0.0 .
 
       - name: Scan vulnerabilites avec Trivy
         uses: aquasecurity/trivy-action@master
@@ -78,10 +83,9 @@ jobs:
         run: |
           echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-      - name: Build Docker image
+      - name: Build and Push Docker image
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
-
-      - name: Push image vers Docker Hub
-        run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          docker build -t ${DOCKER_USER}/intranet-newdeal:1.0.0 .
+          docker push ${DOCKER_USER}/intranet-newdeal:1.0.0
