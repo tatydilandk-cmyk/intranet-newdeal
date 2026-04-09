@@ -1,0 +1,88 @@
+name: CI Pipeline - dev
+
+on:
+  push:
+    branches:
+      - dev
+
+env:
+  IMAGE_NAME: intranet-newdeal
+  IMAGE_TAG: 1.0.0
+  DOCKER_REGISTRY: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+
+  # ===============================
+  # JOB 1 - BUILD IMAGE DOCKER
+  # ===============================
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build Docker image
+        run: |
+          docker build -t $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
+
+      - name: Verify image
+        run: |
+          docker image ls | grep $IMAGE_NAME
+
+  # ===============================
+  # JOB 2 - SCAN SECURITE
+  # ===============================
+  scan:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image for scan
+        run: |
+          docker build -t $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
+
+      - name: Scan vulnérabilités avec Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:1.0.0
+          format: table
+          exit-code: '0'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Scan secrets avec Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret
+          format: table
+          exit-code: '0'
+
+  # ===============================
+  # JOB 3 - PUSH IMAGE DOCKER HUB
+  # ===============================
+  push:
+    needs: scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build Docker image
+        run: |
+          docker build -t $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
+
+      - name: Push image vers Docker Hub
+        run: |
+          docker push $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
