@@ -1,0 +1,56 @@
+name: CD Pipeline - prod
+
+on:
+  push:
+    branches:
+      - prod
+
+jobs:
+
+  # ===============================
+  # JOB 1 - SCAN SECURITE
+  # ===============================
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Scan vulnerabilites avec Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: tatydl/intranet-newdeal:1.0.0
+          format: table
+          exit-code: '0'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+  # ===============================
+  # JOB 2 - DEPLOIEMENT
+  # ===============================
+  deploy:
+    needs: scan
+    runs-on: self-hosted
+    steps:
+      - name: Pull latest image
+        shell: powershell
+        run: |
+          docker pull tatydl/intranet-newdeal:1.0.0
+
+      - name: Stop existing container
+        shell: powershell
+        run: |
+          docker stop intranet-app; $LASTEXITCODE = 0
+
+      - name: Remove old container
+        shell: powershell
+        run: |
+          docker rm intranet-app; $LASTEXITCODE = 0
+
+      - name: Run new container
+        shell: powershell
+        run: |
+          docker run -d `
+            -p 80:80 `
+            --name intranet-app `
+            tatydl/intranet-newdeal:1.0.0
