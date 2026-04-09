@@ -93,17 +93,17 @@ jobs:
     if: always()
     steps:
       - name: Send email notification
-        uses: dawidd6/action-send-mail@v3
+        uses: dawidd6/action-send-mail@v4
         with:
           server_address: smtp.gmail.com
-          server_port: 465
+          server_port: 587
+          secure: false
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "CI Pipeline - ${{ job.status }} - intranet-newdeal"
+          subject: "CI Pipeline - intranet-newdeal - ${{ github.ref_name }}"
           to: moussawade@groupeisi.com
           from: ${{ secrets.MAIL_USERNAME }}
           body: |
             Le pipeline CI sur la branche dev s est termine.
-            Statut : ${{ job.status }}
             Repository : ${{ github.repository }}
             Commit : ${{ github.sha }}
