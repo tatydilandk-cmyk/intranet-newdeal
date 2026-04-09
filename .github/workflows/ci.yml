@@ -52,9 +52,9 @@ jobs:
         with:
           image-ref: tatydl/intranet-newdeal:1.0.0
           format: table
-          exit-code: '0'
+          exit-code: '1'
           ignore-unfixed: true
-          severity: CRITICAL,HIGH
+          severity: CRITICAL
 
       - name: Scan secrets avec Trivy
         uses: aquasecurity/trivy-action@master
@@ -83,3 +83,27 @@ jobs:
         run: |
           docker build -t tatydl/intranet-newdeal:1.0.0 .
           docker push tatydl/intranet-newdeal:1.0.0
+
+  # ===============================
+  # JOB 4 - NOTIFICATION EMAIL
+  # ===============================
+  notify:
+    needs: [build, scan, push]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "CI Pipeline - ${{ job.status }} - intranet-newdeal"
+          to: moussawade@groupeisi.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: |
+            Le pipeline CI sur la branche dev s est termine.
+            Statut : ${{ job.status }}
+            Repository : ${{ github.repository }}
+            Commit : ${{ github.sha }}
